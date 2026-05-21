@@ -6,6 +6,7 @@ import Link from "next/link";
 import { FiSearch, FiHeart, FiShoppingBag, FiMenu } from "react-icons/fi";
 import SearchModal from "./SearchModal";
 import MobileMenu from "./MobileMenu";
+import { useCart } from "@/lib/cart-context";
 
 const navItems = [
   { label: "New Arrivals", href: "/collections/new-arrivals" },
@@ -62,7 +63,7 @@ const navItems = [
 export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [cartCount] = useState(0);
+  const { totalItems: cartCount } = useCart();
 
   return (
     <>
@@ -87,7 +88,7 @@ export default function Header() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <img
-                src="/logo.jpeg"
+                src="/logo.png"
                 alt="ZoeTrends Boutique"
                 className="h-20 md:h-28 w-auto object-cover"
               />

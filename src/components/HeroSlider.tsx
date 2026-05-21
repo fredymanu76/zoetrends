@@ -71,7 +71,7 @@ export default function HeroSlider() {
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-10 right-10 w-64 h-64 border border-gold/20 rounded-full" />
             <div className="absolute bottom-10 left-10 w-48 h-48 rounded-full overflow-hidden border border-gold/20">
-              <img src="/logo.jpeg" alt="ZoeTrends Boutique" className="w-full h-full object-cover" />
+              <img src="/logo.png" alt="ZoeTrends Boutique" className="w-full h-full object-cover" />
             </div>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] border border-gold/10 rounded-full" />
           </div>

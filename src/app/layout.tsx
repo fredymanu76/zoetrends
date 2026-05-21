@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import Providers from "@/components/Providers";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -36,10 +37,12 @@ export default function RootLayout({
       className={`h-full antialiased ${montserrat.variable} ${playfair.variable}`}
     >
       <body className="min-h-full flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <WhatsAppButton />
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+          <WhatsAppButton />
+        </Providers>
       </body>
     </html>
   );

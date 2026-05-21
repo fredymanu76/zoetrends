@@ -62,7 +62,7 @@ export default function AccountPage() {
             </div>
             <button
               type="submit"
-              className="w-full py-4 bg-black text-gold text-sm uppercase tracking-widest hover:bg-gold hover:text-black transition-all duration-300"
+              className="w-full py-4 bg-gold text-black text-sm uppercase tracking-widest hover:bg-gold-dark transition-all duration-300"
             >
               Sign In
             </button>
@@ -116,7 +116,7 @@ export default function AccountPage() {
             </div>
             <button
               type="submit"
-              className="w-full py-4 bg-black text-gold text-sm uppercase tracking-widest hover:bg-gold hover:text-black transition-all duration-300"
+              className="w-full py-4 bg-gold text-black text-sm uppercase tracking-widest hover:bg-gold-dark transition-all duration-300"
             >
               Create Account
             </button>

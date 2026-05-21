@@ -12,7 +12,7 @@ export default function Footer() {
           <div>
             <div className="mb-4">
               <img
-                src="/logo.jpeg"
+                src="/logo.png"
                 alt="ZoeTrends Boutique"
                 className="w-28 h-28 object-contain"
               />

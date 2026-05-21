@@ -1,40 +1,23 @@
 import Link from "next/link";
-import ProductCard, { Product } from "./ProductCard";
+import ProductCard from "./ProductCard";
+import type { Product } from "@/types";
 
-const newArrivals: Product[] = [
-  {
-    id: "1",
-    name: "The Sculpted Olive Button Through Sleeveless Dress",
-    price: "£49.00",
-    href: "/products/sculpted-olive-dress",
-    colors: ["#6a7756", "#1a1a1a", "#d4a0a0"],
-    badge: "New",
-  },
-  {
-    id: "2",
-    name: "The Julia Pretty Woman Polka Dress With Belt",
-    price: "£32.00",
-    href: "/products/julia-polka-dress",
-    colors: ["#1a1a1a", "#c9a84c", "#ffffff"],
-    badge: "New",
-  },
-  {
-    id: "3",
-    name: "The Oasis Golden Thread Glow Button Through Shirt Dress",
-    price: "£29.00",
-    href: "/products/oasis-golden-dress",
-    colors: ["#c9a84c", "#d4a0a0", "#f0dada"],
-  },
-  {
-    id: "4",
-    name: "The Santorini Sands Classic Summer Cross Front Dress With Belt",
-    price: "£29.00",
-    href: "/products/santorini-sands-dress",
-    colors: ["#e8d5c0", "#1a1a1a", "#d4a0a0"],
-  },
-];
+async function getFeaturedProducts(): Promise<Product[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const res = await fetch(`${baseUrl}/api/products?featured=true&limit=4`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
 
-export default function ProductGrid() {
+export default async function ProductGrid() {
+  const products = await getFeaturedProducts();
+
   return (
     <section className="py-16 md:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,11 +33,17 @@ export default function ProductGrid() {
         </div>
 
         {/* Product grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {newArrivals.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-charcoal/60 text-sm">
+            Products coming soon
+          </p>
+        )}
 
         {/* View all link */}
         <div className="text-center mt-12">

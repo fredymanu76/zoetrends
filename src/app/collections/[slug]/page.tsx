@@ -1,74 +1,20 @@
 import Link from "next/link";
-import ProductCard, { Product } from "@/components/ProductCard";
+import ProductCard from "@/components/ProductCard";
+import { formatSlug } from "@/lib/utils";
+import type { Product } from "@/types";
 
-const sampleProducts: Product[] = [
-  {
-    id: "1",
-    name: "The Sculpted Olive Button Through Sleeveless Dress",
-    price: "£49.00",
-    href: "/products/sculpted-olive-dress",
-    colors: ["#6a7756", "#1a1a1a", "#d4a0a0"],
-    badge: "New",
-  },
-  {
-    id: "2",
-    name: "The Julia Pretty Woman Polka Dress With Belt",
-    price: "£32.00",
-    href: "/products/julia-polka-dress",
-    colors: ["#1a1a1a", "#c9a84c", "#ffffff"],
-  },
-  {
-    id: "3",
-    name: "The Oasis Golden Thread Glow Button Through Shirt Dress",
-    price: "£29.00",
-    href: "/products/oasis-golden-dress",
-    colors: ["#c9a84c", "#d4a0a0", "#f0dada"],
-  },
-  {
-    id: "4",
-    name: "The Santorini Sands Classic Summer Cross Front Dress With Belt",
-    price: "£29.00",
-    href: "/products/santorini-sands-dress",
-    colors: ["#e8d5c0", "#1a1a1a", "#d4a0a0"],
-  },
-  {
-    id: "5",
-    name: "The Amalfi Coast Linen Wrap Dress",
-    price: "£39.00",
-    href: "/products/amalfi-coast-dress",
-    colors: ["#f0dada", "#c9a84c"],
-    badge: "Bestseller",
-  },
-  {
-    id: "6",
-    name: "The Roma Gold Thread Midi Skirt",
-    price: "£35.00",
-    href: "/products/roma-gold-skirt",
-    colors: ["#c9a84c", "#1a1a1a"],
-  },
-  {
-    id: "7",
-    name: "The Milano Black Evening Blouse",
-    price: "£42.00",
-    href: "/products/milano-blouse",
-    colors: ["#1a1a1a", "#d4a0a0"],
-  },
-  {
-    id: "8",
-    name: "The Firenze Dusty Rose Maxi Dress",
-    price: "£55.00",
-    originalPrice: "£75.00",
-    href: "/products/firenze-maxi-dress",
-    colors: ["#d4a0a0", "#f0dada", "#1a1a1a"],
-    badge: "Sale",
-  },
-];
-
-function formatSlug(slug: string): string {
-  return slug
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+async function getCollectionProducts(slug: string): Promise<Product[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const res = await fetch(
+      `${baseUrl}/api/products?collection=${slug}&limit=50`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export default async function CollectionPage({
@@ -78,6 +24,7 @@ export default async function CollectionPage({
 }) {
   const { slug } = await params;
   const title = formatSlug(slug);
+  const products = await getCollectionProducts(slug);
 
   return (
     <div className="min-h-screen bg-white">
@@ -97,12 +44,14 @@ export default async function CollectionPage({
         <section className="bg-[#2ec4c4] py-6 md:py-8 text-center">
           <div className="max-w-7xl mx-auto px-4">
             <h3 className="text-2xl md:text-3xl font-semibold text-white mb-2">
-              You've Been Missing Out!
+              You&apos;ve Been Missing Out!
             </h3>
             <p className="text-sm md:text-base text-white font-semibold">
               Enter code:{" "}
-              <span className="font-extrabold text-white uppercase tracking-wider">Welcome</span> at the
-              checkout to receive 10% off your first order!
+              <span className="font-extrabold text-white uppercase tracking-wider">
+                Welcome
+              </span>{" "}
+              at the checkout to receive 10% off your first order!
             </p>
           </div>
         </section>
@@ -115,7 +64,7 @@ export default async function CollectionPage({
         </h1>
         <div className="w-16 h-0.5 bg-gold mx-auto mt-4" />
         <p className="text-sm text-charcoal/70 mt-4 font-light">
-          {sampleProducts.length} products
+          {products.length} {products.length === 1 ? "product" : "products"}
         </p>
       </div>
 
@@ -130,17 +79,31 @@ export default async function CollectionPage({
           </button>
         </div>
         <p className="text-xs text-charcoal/60">
-          Showing {sampleProducts.length} results
+          Showing {products.length} results
         </p>
       </div>
 
       {/* Product grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {sampleProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {products.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-charcoal/60 font-light">
+              No products in this collection yet
+            </p>
+            <Link
+              href="/collections/new-arrivals"
+              className="inline-block mt-4 px-8 py-3 bg-gold text-black text-sm tracking-widest uppercase hover:bg-gold-dark transition-all duration-300"
+            >
+              Browse New Arrivals
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

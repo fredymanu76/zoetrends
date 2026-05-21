@@ -1,44 +1,52 @@
 import Link from "next/link";
-
-export interface Product {
-  id: string;
-  name: string;
-  price: string;
-  originalPrice?: string;
-  href: string;
-  colors: string[];
-  badge?: string;
-}
+import Image from "next/image";
+import { formatPence } from "@/lib/utils";
+import type { Product } from "@/types";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const hasImage = product.images.length > 0;
+
   return (
-    <Link href={product.href} className="product-card group block">
-      {/* Image placeholder */}
+    <Link
+      href={`/products/${product.slug}`}
+      className="product-card group block"
+    >
+      {/* Image */}
       <div className="relative aspect-[3/4] bg-dusty-pink-pale overflow-hidden rounded-sm mb-3">
-        <div className="product-image w-full h-full bg-gradient-to-br from-dusty-pink-light to-dusty-pink-pale flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-2 border-2 border-gold/30 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gold/40"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+        {hasImage ? (
+          <Image
+            src={product.images[0].url}
+            alt={product.name}
+            fill
+            className="product-image object-cover"
+            sizes="(max-width: 768px) 50vw, 25vw"
+          />
+        ) : (
+          <div className="product-image w-full h-full bg-gradient-to-br from-dusty-pink-light to-dusty-pink-pale flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-2 border-2 border-gold/30 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-gold/40"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <p className="text-xs text-dusty-pink-dark/60">Product Image</p>
             </div>
-            <p className="text-xs text-dusty-pink-dark/60">Product Image</p>
           </div>
-        </div>
+        )}
 
         {/* Badge */}
         {product.badge && (
@@ -62,11 +70,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         </h3>
         <div className="flex items-center justify-center gap-2">
           <span className="text-sm font-semibold text-black">
-            {product.price}
+            {formatPence(product.pricePence)}
           </span>
-          {product.originalPrice && (
+          {product.originalPricePence && (
             <span className="text-sm text-dusty-pink-dark line-through">
-              {product.originalPrice}
+              {formatPence(product.originalPricePence)}
             </span>
           )}
         </div>
