@@ -35,7 +35,7 @@ function SuccessContent() {
 
   useEffect(() => {
     if (!orderId) {
-      setLoading(false);
+      window.setTimeout(() => setLoading(false), 0);
       return;
     }
 

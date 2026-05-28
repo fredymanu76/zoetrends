@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
+import {
+  deleteProduct,
+  getProductById,
+  updateProduct,
+} from "@/lib/products/repository";
 
 function verifyAdmin(req: NextRequest): boolean {
   const auth = req.headers.get("x-admin-password");
@@ -12,14 +16,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const db = getAdminDb();
-    const doc = await db.collection("products").doc(id).get();
+    const product = await getProductById(id);
 
-    if (!doc.exists) {
+    if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ id: doc.id, ...doc.data() });
+    return NextResponse.json(product);
   } catch (err) {
     console.error("GET /api/products/[id] error:", err);
     return NextResponse.json(
@@ -39,22 +42,21 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const db = getAdminDb();
     const body = await req.json();
 
-    const docRef = db.collection("products").doc(id);
-    const doc = await docRef.get();
+    const product = await getProductById(id);
 
-    if (!doc.exists) {
+    if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const updateData = {
+    await updateProduct(id, {
       ...body,
-      updatedAt: new Date().toISOString(),
-    };
-
-    await docRef.update(updateData);
+      modelPreviewEnabled: false,
+      garmentCategory: null,
+      aiReadyGarmentImageUrl: null,
+      modelPreviewImages: [],
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -76,9 +78,7 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    const db = getAdminDb();
-
-    await db.collection("products").doc(id).delete();
+    await deleteProduct(id);
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { getProductById, updateProduct } from "@/lib/products/repository";
 import type { ProductImage } from "@/types";
 
 function verifyAdmin(req: NextRequest): boolean {
@@ -14,27 +14,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = getAdminDb();
     const { productId, image } = (await req.json()) as {
       productId: string;
       image: ProductImage;
     };
 
-    const docRef = db.collection("products").doc(productId);
-    const doc = await docRef.get();
+    const product = await getProductById(productId);
 
-    if (!doc.exists) {
+    if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const data = doc.data()!;
-    const images: ProductImage[] = data.images || [];
+    const images: ProductImage[] = product.images || [];
     images.push(image);
 
-    await docRef.update({
-      images,
-      updatedAt: new Date().toISOString(),
-    });
+    await updateProduct(productId, { images });
 
     return NextResponse.json({ success: true });
   } catch (err) {
@@ -53,25 +47,19 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const db = getAdminDb();
     const { productId, storagePath } = await req.json();
 
-    const docRef = db.collection("products").doc(productId);
-    const doc = await docRef.get();
+    const product = await getProductById(productId);
 
-    if (!doc.exists) {
+    if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const data = doc.data()!;
-    const images: ProductImage[] = (data.images || []).filter(
+    const images: ProductImage[] = (product.images || []).filter(
       (img: ProductImage) => img.storagePath !== storagePath
     );
 
-    await docRef.update({
-      images,
-      updatedAt: new Date().toISOString(),
-    });
+    await updateProduct(productId, { images });
 
     return NextResponse.json({ success: true });
   } catch (err) {

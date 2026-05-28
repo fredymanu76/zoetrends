@@ -1,17 +1,23 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import { formatSlug } from "@/lib/utils";
+import { categoryToCollectionSlug, formatSlug } from "@/lib/utils";
+import { COLLECTIONS, CATEGORIES } from "@/lib/constants";
+import { listProducts } from "@/lib/products/repository";
 import type { Product } from "@/types";
 
 async function getCollectionProducts(slug: string): Promise<Product[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(
-      `${baseUrl}/api/products?collection=${slug}&limit=50`,
-      { cache: "no-store" }
+    const collection = COLLECTIONS.find((item) => item.slug === slug);
+    const category = CATEGORIES.find(
+      (item) => categoryToCollectionSlug(item) === slug
     );
-    if (!res.ok) return [];
-    return res.json();
+
+    return listProducts({
+      status: "active",
+      collection: collection?.slug || slug,
+      category,
+      limit: 50,
+    });
   } catch {
     return [];
   }

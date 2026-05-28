@@ -35,7 +35,7 @@ export default function AdminShell({
     if (!token) {
       router.push("/admin/login");
     } else {
-      setAuthenticated(true);
+      window.setTimeout(() => setAuthenticated(true), 0);
     }
   }, [router]);
 

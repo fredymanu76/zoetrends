@@ -36,6 +36,9 @@ export default function AdminDashboard() {
   const lowStockProducts = products.filter((p) =>
     p.variants.some((v) => v.stock > 0 && v.stock <= 3)
   );
+  const visibleLowStockProducts = lowStockProducts.slice(0, 6);
+  const hiddenLowStockCount =
+    lowStockProducts.length - visibleLowStockProducts.length;
 
   return (
     <AdminShell>
@@ -113,18 +116,37 @@ export default function AdminDashboard() {
             {/* Low stock alert */}
             {lowStockProducts.length > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="font-semibold text-yellow-800 mb-2">
-                  Low Stock Alert
-                </h3>
-                <div className="space-y-1">
-                  {lowStockProducts.map((p) => (
-                    <p key={p.id} className="text-sm text-yellow-700">
-                      {p.name} —{" "}
-                      {p.variants
-                        .filter((v) => v.stock <= 3 && v.stock > 0)
-                        .map((v) => `${v.size}: ${v.stock} left`)
-                        .join(", ")}
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">
+                      Low Stock Alert
+                    </h3>
+                    <p className="text-xs text-yellow-700/80 mt-1">
+                      Showing items with 3 or fewer units in any size.
                     </p>
+                  </div>
+                  {hiddenLowStockCount > 0 && (
+                    <span className="text-xs text-yellow-800">
+                      +{hiddenLowStockCount} more
+                    </span>
+                  )}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleLowStockProducts.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-md border border-yellow-200 bg-white/70 p-3"
+                    >
+                      <p className="text-sm font-medium text-yellow-900">
+                        {p.name}
+                      </p>
+                      <p className="text-xs text-yellow-700 mt-1">
+                        {p.variants
+                          .filter((v) => v.stock <= 3 && v.stock > 0)
+                          .map((v) => `${v.size}: ${v.stock} left`)
+                          .join(", ")}
+                      </p>
+                    </div>
                   ))}
                 </div>
               </div>

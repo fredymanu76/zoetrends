@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getClientStorage, isFirebaseConfigured } from "@/lib/firebase/client";
 import { CATEGORIES, COLLECTIONS, SIZES } from "@/lib/constants";
-import { formatPence } from "@/lib/utils";
-import type { Product, ProductImage, ProductVariant } from "@/types";
+import { categoryToCollectionSlugs, formatPence } from "@/lib/utils";
+import type {
+  Product,
+  ProductImage,
+  ProductVariant,
+} from "@/types";
 import { FiX, FiUpload } from "react-icons/fi";
 
 interface ProductFormProps {
@@ -70,24 +72,31 @@ export default function ProductForm({ product }: ProductFormProps) {
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
-    if (!files?.length || !isFirebaseConfigured) return;
+    if (!files?.length) return;
 
     setUploading(true);
     const token = sessionStorage.getItem("admin_token");
-    const storage = getClientStorage();
 
     try {
       for (const file of Array.from(files)) {
-        const path = `products/${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(storageRef);
+        const body = new FormData();
+        body.append("file", file);
+        body.append("order", String(images.length));
 
-        const newImage: ProductImage = {
-          url,
-          storagePath: path,
-          order: images.length,
-        };
+        const res = await fetch("/api/admin/uploads/product-image", {
+          method: "POST",
+          headers: {
+            "x-admin-password": token || "",
+          },
+          body,
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to upload image");
+        }
+
+        const newImage = data.image as ProductImage;
 
         setImages((prev) => [...prev, newImage]);
 
@@ -105,7 +114,11 @@ export default function ProductForm({ product }: ProductFormProps) {
       }
     } catch (err) {
       console.error("Image upload error:", err);
-      setError("Failed to upload image");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to upload image locally"
+      );
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -139,19 +152,28 @@ export default function ProductForm({ product }: ProductFormProps) {
       ? Math.round(parseFloat(originalPricePounds) * 100)
       : null;
 
+    const categoryCollections = category ? categoryToCollectionSlugs(category) : [];
+    const productCollections = Array.from(
+      new Set([...selectedCollections, ...categoryCollections].filter(Boolean))
+    );
+
     const body = {
       name,
       description,
       pricePence,
       originalPricePence: origPence,
       category,
-      collections: selectedCollections,
+      collections: productCollections,
       colors,
       variants: variants.filter((v) => v.stock > 0 || isEdit),
       images,
       badge: badge || null,
       status,
       featured,
+      modelPreviewEnabled: false,
+      garmentCategory: null,
+      aiReadyGarmentImageUrl: null,
+      modelPreviewImages: [],
     };
 
     try {

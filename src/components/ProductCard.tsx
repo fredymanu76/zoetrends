@@ -8,7 +8,8 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const hasImage = product.images.length > 0;
+  const primaryImage = product.images[0]?.url || "";
+  const hasImage = !!primaryImage;
 
   return (
     <Link
@@ -19,11 +20,12 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="relative aspect-[3/4] bg-dusty-pink-pale overflow-hidden rounded-sm mb-3">
         {hasImage ? (
           <Image
-            src={product.images[0].url}
+            src={primaryImage}
             alt={product.name}
             fill
             className="product-image object-cover"
             sizes="(max-width: 768px) 50vw, 25vw"
+            unoptimized={primaryImage.startsWith("data:")}
           />
         ) : (
           <div className="product-image w-full h-full bg-gradient-to-br from-dusty-pink-light to-dusty-pink-pale flex items-center justify-center">

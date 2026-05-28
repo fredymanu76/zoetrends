@@ -21,6 +21,49 @@ export function slugify(text: string): string {
     .replace(/-+/g, "-");
 }
 
+export function categoryToCollectionSlug(category: string): string {
+  return slugify(category);
+}
+
+export function categoryToCollectionSlugs(category: string): string[] {
+  const slug = categoryToCollectionSlug(category);
+  if (collectionContainsCategorySlug("clothing", slug)) return [slug, "clothing"];
+  if (collectionContainsCategorySlug("accessories", slug)) return [slug, "accessories"];
+  if (collectionContainsCategorySlug("footwear", slug)) return [slug, "footwear"];
+  return slug ? [slug] : [];
+}
+
+export function collectionContainsCategorySlug(
+  collectionSlug: string,
+  categorySlug: string
+): boolean {
+  const children: Record<string, Set<string>> = {
+    clothing: new Set([
+      "dresses",
+      "tops",
+      "trousers",
+      "jumpsuits",
+      "knitwear",
+      "jackets-coats",
+    ]),
+    accessories: new Set(["bags", "jewellery", "scarves", "belts", "hats"]),
+    footwear: new Set(["sandals", "heels", "flats", "boots"]),
+  };
+
+  return children[collectionSlug]?.has(categorySlug) || false;
+}
+
+export function collectionMatchesProductSlugs(
+  collectionSlug: string,
+  productSlugs: string[]
+): boolean {
+  return productSlugs.some(
+    (slug) =>
+      slug === collectionSlug ||
+      collectionContainsCategorySlug(collectionSlug, slug)
+  );
+}
+
 export function formatSlug(slug: string): string {
   return slug
     .split("-")

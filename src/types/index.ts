@@ -4,6 +4,14 @@ export interface ProductImage {
   order: number;
 }
 
+export interface ModelPreviewImage {
+  url: string;
+  angle: "front" | "side" | "back" | "detail";
+  modelName: string;
+  generatedAt: string;
+  provider: string;
+}
+
 export interface ProductVariant {
   size: string;
   stock: number;
@@ -24,9 +32,20 @@ export interface Product {
   badge?: string;
   status: "draft" | "active" | "archived";
   featured: boolean;
+  modelPreviewEnabled?: boolean;
+  garmentCategory?: GarmentCategory;
+  aiReadyGarmentImageUrl?: string;
+  modelPreviewImages?: ModelPreviewImage[];
   createdAt: string;
   updatedAt: string;
 }
+
+export type GarmentCategory =
+  | "top"
+  | "bottom"
+  | "dress"
+  | "jacket"
+  | "full_outfit";
 
 export interface CartItem {
   productId: string;

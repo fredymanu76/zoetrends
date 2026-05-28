@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
-import { slugify } from "@/lib/utils";
-import type { Product } from "@/types";
+import { createProduct, listProducts } from "@/lib/products/repository";
 
 function verifyAdmin(req: NextRequest): boolean {
   const auth = req.headers.get("x-admin-password");
@@ -10,7 +8,6 @@ function verifyAdmin(req: NextRequest): boolean {
 
 export async function GET(req: NextRequest) {
   try {
-    const db = getAdminDb();
     const { searchParams } = new URL(req.url);
     const collection = searchParams.get("collection");
     const category = searchParams.get("category");
@@ -18,30 +15,13 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    let query: FirebaseFirestore.Query = db.collection("products");
-
-    if (collection) {
-      query = query.where("collections", "array-contains", collection);
-    }
-    if (category) {
-      query = query.where("category", "==", category);
-    }
-    if (featured === "true") {
-      query = query.where("featured", "==", true);
-    }
-    if (status) {
-      query = query.where("status", "==", status);
-    } else {
-      query = query.where("status", "==", "active");
-    }
-
-    query = query.orderBy("createdAt", "desc").limit(limit);
-
-    const snap = await query.get();
-    const products: Product[] = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Product[];
+    const products = await listProducts({
+      collection,
+      category,
+      featured: featured === "true",
+      status: (status || "active") as "draft" | "active" | "archived",
+      limit,
+    });
 
     return NextResponse.json(products);
   } catch (err) {
@@ -59,15 +39,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = getAdminDb();
     const body = await req.json();
-
-    const slug = slugify(body.name);
-    const now = new Date().toISOString();
 
     const productData = {
       name: body.name,
-      slug,
       description: body.description || "",
       pricePence: body.pricePence,
       originalPricePence: body.originalPricePence || null,
@@ -79,13 +54,15 @@ export async function POST(req: NextRequest) {
       badge: body.badge || null,
       status: body.status || "draft",
       featured: body.featured || false,
-      createdAt: now,
-      updatedAt: now,
+      modelPreviewEnabled: false,
+      garmentCategory: undefined,
+      aiReadyGarmentImageUrl: undefined,
+      modelPreviewImages: [],
     };
 
-    const docRef = await db.collection("products").add(productData);
+    const result = await createProduct(productData);
 
-    return NextResponse.json({ id: docRef.id, slug }, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
     console.error("POST /api/products error:", err);
     return NextResponse.json(

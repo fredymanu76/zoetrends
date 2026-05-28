@@ -1,19 +1,6 @@
 import { notFound } from "next/navigation";
 import ProductDetail from "./ProductDetail";
-import type { Product } from "@/types";
-
-async function getProduct(slug: string): Promise<Product | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/products/by-slug/${slug}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+import { getProductBySlug } from "@/lib/products/repository";
 
 export default async function ProductPage({
   params,
@@ -21,7 +8,7 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();

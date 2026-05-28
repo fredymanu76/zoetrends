@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { getProductBySlug } from "@/lib/products/repository";
 
 export async function GET(
   _req: NextRequest,
@@ -7,21 +7,13 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const db = getAdminDb();
+    const product = await getProductBySlug(slug);
 
-    const snap = await db
-      .collection("products")
-      .where("slug", "==", slug)
-      .where("status", "==", "active")
-      .limit(1)
-      .get();
-
-    if (snap.empty) {
+    if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const doc = snap.docs[0];
-    return NextResponse.json({ id: doc.id, ...doc.data() });
+    return NextResponse.json(product);
   } catch (err) {
     console.error("GET /api/products/by-slug/[slug] error:", err);
     return NextResponse.json(

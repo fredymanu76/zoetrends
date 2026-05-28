@@ -1,15 +1,11 @@
 import Link from "next/link";
 import ProductCard from "./ProductCard";
+import { listProducts } from "@/lib/products/repository";
 import type { Product } from "@/types";
 
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/products?featured=true&limit=4`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    return res.json();
+    return listProducts({ status: "active", featured: true, limit: 4 });
   } catch {
     return [];
   }
