@@ -71,7 +71,11 @@ export async function POST(req: NextRequest) {
     const product = await getProductById(productId);
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-    const isApparel = !!product.garmentCategory;
+    const APPAREL_CATEGORIES = new Set([
+      "Dresses", "Tops", "Knitwear", "Trousers", "Jumpsuits", "Jackets & Coats",
+    ]);
+    const isApparel = !!product.garmentCategory || APPAREL_CATEGORIES.has(product.category);
+    let photoroomError = "";
     const flatUrl =
       product.aiReadyGarmentImageUrl || product.images[product.images.length - 1]?.url;
     if (!flatUrl) return NextResponse.json({ error: "This product has no flat image to model." }, { status: 400 });
@@ -97,7 +101,11 @@ export async function POST(req: NextRequest) {
       f.append("virtualModel.size", "PORTRAIT_HD_3_2");
       f.append("export.format", "png");
       const res = await fetch(PHOTOROOM_EDIT_URL, { method: "POST", headers: { "x-api-key": key! }, body: f });
-      return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
+      if (!res.ok) {
+        photoroomError = `${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`;
+        return null;
+      }
+      return Buffer.from(await res.arrayBuffer());
     }
     async function genProductShot(): Promise<Buffer | null> {
       const f = new FormData();
@@ -105,7 +113,11 @@ export async function POST(req: NextRequest) {
       f.append("bg_color", "FFFFFF");
       f.append("format", "png");
       const res = await fetch(PHOTOROOM_SEGMENT_URL, { method: "POST", headers: { "x-api-key": key! }, body: f });
-      return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
+      if (!res.ok) {
+        photoroomError = `${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`;
+        return null;
+      }
+      return Buffer.from(await res.arrayBuffer());
     }
 
     const generated: { buffer: Buffer; angle: Angle }[] = [];
@@ -114,7 +126,15 @@ export async function POST(req: NextRequest) {
       if (buf) generated.push({ buffer: buf, angle: step.angle });
     }
     if (!generated.length) {
-      return NextResponse.json({ error: "Photoroom generation failed. Check your key/quota." }, { status: 502 });
+      const outOfCredits = /402|exhausted|plan/i.test(photoroomError);
+      return NextResponse.json(
+        {
+          error: outOfCredits
+            ? "Your Photoroom plan is out of image credits. Top up at app.photoroom.com/api-dashboard, then try again."
+            : `Photoroom generation failed. ${photoroomError}`.trim(),
+        },
+        { status: outOfCredits ? 402 : 502 }
+      );
     }
 
     const base = product.slug || "product";
