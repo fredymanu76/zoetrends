@@ -8,7 +8,7 @@ import {
   FiShoppingCart,
   FiTag,
   FiGrid,
-  FiCamera,
+  FiHome,
   FiUploadCloud,
   FiLogOut,
   FiMenu,
@@ -18,8 +18,8 @@ import {
 const navLinks = [
   { href: "/admin", label: "Dashboard", icon: FiGrid },
   { href: "/admin/upload", label: "Add Products", icon: FiUploadCloud },
+  { href: "/admin/homepage", label: "Homepage", icon: FiHome },
   { href: "/admin/products", label: "Products", icon: FiPackage },
-  { href: "/admin/ai-studio", label: "AI Model Studio", icon: FiCamera },
   { href: "/admin/orders", label: "Orders", icon: FiShoppingCart },
   { href: "/admin/discounts", label: "Discounts", icon: FiTag },
 ];

@@ -3,16 +3,24 @@ import ProductCard from "./ProductCard";
 import { listProducts } from "@/lib/products/repository";
 import type { Product } from "@/types";
 
-async function getFeaturedProducts(): Promise<Product[]> {
+async function getNewArrivals(): Promise<Product[]> {
   try {
-    return listProducts({ status: "active", featured: true, limit: 4 });
+    // Curated via the Homepage page (products ticked into "New Arrivals").
+    const curated = await listProducts({
+      status: "active",
+      collection: "home-new-arrivals",
+      limit: 8,
+    });
+    if (curated.length) return curated;
+    // Fallback: newest featured products.
+    return await listProducts({ status: "active", featured: true, limit: 8 });
   } catch {
     return [];
   }
 }
 
 export default async function ProductGrid() {
-  const products = await getFeaturedProducts();
+  const products = await getNewArrivals();
 
   return (
     <section className="py-16 md:py-20 bg-white">
