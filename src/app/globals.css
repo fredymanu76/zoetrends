@@ -123,3 +123,25 @@ a {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-gold-dark);
 }
+
+/* Hide scrollbar on the hero image row */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Continuous horizontal scroll for the hero model row */
+@keyframes hero-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.hero-scroll {
+  animation: hero-scroll 45s linear infinite;
+  will-change: transform;
+}
+.hero-scroll:hover {
+  animation-play-state: paused;
+}
