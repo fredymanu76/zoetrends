@@ -17,13 +17,13 @@ export default function ProductCard({ product }: ProductCardProps) {
       className="product-card group block"
     >
       {/* Image */}
-      <div className="relative aspect-[3/4] bg-dusty-pink-pale overflow-hidden rounded-sm mb-3">
+      <div className="relative aspect-[2/3] bg-dusty-pink-pale overflow-hidden rounded-sm mb-3">
         {hasImage ? (
           <Image
             src={primaryImage}
             alt={product.name}
             fill
-            className="product-image object-cover"
+            className="product-image object-cover object-top"
             sizes="(max-width: 768px) 50vw, 25vw"
             unoptimized={primaryImage.startsWith("data:")}
           />
