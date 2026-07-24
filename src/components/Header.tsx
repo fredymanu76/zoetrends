@@ -10,6 +10,7 @@ import { useCart } from "@/lib/cart-context";
 
 const navItems = [
   { label: "New Arrivals", href: "/collections/new-arrivals" },
+  { label: "Made in Italy", href: "/collections/made-in-italy" },
   {
     label: "Clothing",
     href: "/collections/clothing",
@@ -69,7 +70,7 @@ export default function Header() {
     <>
       {/* Top announcement bar */}
       <div className="bg-gold text-black text-center py-2 text-xs tracking-widest uppercase">
-        Next Day Delivery &nbsp;|&nbsp; Pay in 30 Days with Klarna
+        Free Delivery on all orders above £50 within UK Mainland
       </div>
 
       {/* Main header */}
