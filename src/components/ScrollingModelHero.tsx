@@ -72,23 +72,23 @@ export default async function ScrollingModelHero() {
 
       {/* Continuously scrolling row of AI model cut-outs (pauses on hover) */}
       <div className="relative w-full overflow-hidden">
-        <div className="hero-scroll flex items-end w-max gap-6 md:gap-10 px-8">
+        <div className="hero-scroll flex items-stretch w-max gap-1.5">
           {track.map((m, i) => {
             const inner = (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={m.src}
                 alt="ZoeTrends look"
-                className="h-full w-auto object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.12)]"
+                className="w-full h-full object-cover object-top"
               />
             );
             return (
               <div
                 key={i}
-                className="relative shrink-0 w-[240px] md:w-[320px] h-[52vh] md:h-[68vh] flex items-end justify-center"
+                className="relative shrink-0 w-[320px] md:w-[420px] h-[72vh] md:h-[86vh] overflow-hidden"
               >
                 {m.slug ? (
-                  <Link href={`/products/${m.slug}`} className="h-full flex items-end">
+                  <Link href={`/products/${m.slug}`} className="block w-full h-full">
                     {inner}
                   </Link>
                 ) : (
