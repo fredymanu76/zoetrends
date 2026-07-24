@@ -102,6 +102,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "A valid price is required" }, { status: 400 });
     }
 
+    // Optional custom brand model image (used instead of a preset model).
+    const brandEntry = form.get("customModel");
+    const brandModelBuf = brandEntry instanceof File ? Buffer.from(await brandEntry.arrayBuffer()) : null;
+    const brandModelType = brandEntry instanceof File ? brandEntry.type : "image/png";
+
     // Narrowed captures so the nested helpers keep their types.
     const imageFile: File = file;
     const key: string = apiKey;
@@ -127,7 +132,15 @@ export async function POST(req: NextRequest) {
       const f = new FormData();
       f.append("imageFile", new Blob([flat], { type: imageFile.type }), imageFile.name);
       f.append("virtualModel.mode", "ai.auto");
-      f.append("virtualModel.model.preset.name", model);
+      if (brandModelBuf) {
+        f.append(
+          "virtualModel.model.custom.imageFile",
+          new Blob([new Uint8Array(brandModelBuf)], { type: brandModelType }),
+          "brand-model.png"
+        );
+      } else {
+        f.append("virtualModel.model.preset.name", model);
+      }
       f.append("virtualModel.pose", pose);
       f.append("virtualModel.quality", "standard");
       f.append("virtualModel.size", "PORTRAIT_HD_3_2");

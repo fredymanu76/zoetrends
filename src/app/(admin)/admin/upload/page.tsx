@@ -50,7 +50,9 @@ export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [shots, setShots] = useState(3); // model shots per apparel product
-  const [modelChoice, setModelChoice] = useState("mix"); // "mix" or a preset name
+  const [modelChoice, setModelChoice] = useState("mix"); // "mix" | preset | "custom"
+  const [brandModel, setBrandModel] = useState<File | null>(null);
+  const [brandModelPreview, setBrandModelPreview] = useState<string | null>(null);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -109,6 +111,7 @@ export default function UploadPage() {
       fd.append("variants", JSON.stringify(it.variants));
       fd.append("shots", String(shots));
       fd.append("model", chosenModel);
+      if (modelChoice === "custom" && brandModel) fd.append("customModel", brandModel);
       const res = await fetch("/api/admin/product-studio", {
         method: "POST",
         headers: { "x-admin-password": token },
@@ -132,6 +135,10 @@ export default function UploadPage() {
       (it) => it.status !== "done" && it.name.trim() && Number(it.price) > 0
     );
     if (!ready.length) return;
+    if (modelChoice === "custom" && !brandModel) {
+      alert("Please upload your brand model image first.");
+      return;
+    }
     setBusy(true);
     for (let i = 0; i < ready.length; i++) await publishOne(ready[i], token, i);
     setBusy(false);
@@ -163,6 +170,7 @@ export default function UploadPage() {
               className="border border-gray-300 rounded px-3 py-2 text-sm capitalize"
             >
               <option value="mix">Mix / rotate — diverse (recommended)</option>
+              <option value="custom">Custom brand model (upload your own)</option>
               {PRESET_MODELS.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
@@ -170,9 +178,33 @@ export default function UploadPage() {
             <span className="text-xs text-charcoal/50">
               {modelChoice === "mix"
                 ? "Each product uses a different model, for a varied catalogue."
+                : modelChoice === "custom"
+                ? "Every product is modelled on your uploaded brand model."
                 : `Every product uses the “${modelChoice}” model.`}
             </span>
           </div>
+
+          {modelChoice === "custom" && (
+            <div className="flex flex-wrap items-center gap-3 pl-0 sm:pl-[172px]">
+              {brandModelPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={brandModelPreview} alt="Brand model" className="w-12 h-16 object-cover rounded border border-gray-200" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="text-sm"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  setBrandModel(f);
+                  setBrandModelPreview(f ? URL.createObjectURL(f) : null);
+                }}
+              />
+              <span className="text-xs text-charcoal/50">
+                Upload a clear, full-body photo of your chosen model (front-facing works best).
+              </span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-charcoal w-40">Model shots per product</span>
             <select
