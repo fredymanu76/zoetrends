@@ -9,6 +9,7 @@ import type { Product } from "@/types";
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regenId, setRegenId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("admin_token");
@@ -31,6 +32,43 @@ export default function AdminProductsPage() {
     });
     if (res.ok) {
       setProducts((prev) => prev.filter((p) => p.id !== id));
+    }
+  }
+
+  async function handleRegenerate(product: Product) {
+    if (!confirm(`Generate 3 fresh model shots for "${product.name}"? This uses up to 3 Photoroom credits.`)) return;
+    const token = sessionStorage.getItem("admin_token") || "";
+    setRegenId(product.id);
+    try {
+      const res = await fetch("/api/admin/regenerate-shots", {
+        method: "POST",
+        headers: { "x-admin-password": token, "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, shots: 3 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      // Refresh the row's thumbnail + shot count
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id
+            ? {
+                ...p,
+                images: [{ url: data.primaryUrl, storagePath: data.primaryUrl, order: 0 }, ...p.images.slice(1)],
+                modelPreviewImages: Array.from({ length: data.shots }, () => ({
+                  url: data.primaryUrl,
+                  angle: "front" as const,
+                  modelName: "",
+                  generatedAt: "",
+                  provider: "photoroom",
+                })),
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to regenerate");
+    } finally {
+      setRegenId(null);
     }
   }
 
@@ -105,6 +143,9 @@ export default function AdminProductsPage() {
                             </p>
                             <p className="text-xs text-charcoal/50">
                               {product.category}
+                              {" · "}
+                              {product.modelPreviewImages?.length || 0} model shot
+                              {(product.modelPreviewImages?.length || 0) === 1 ? "" : "s"}
                             </p>
                           </div>
                         </div>
@@ -136,7 +177,14 @@ export default function AdminProductsPage() {
                           {product.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right space-x-2">
+                      <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
+                        <button
+                          onClick={() => handleRegenerate(product)}
+                          disabled={regenId === product.id}
+                          className="text-charcoal hover:text-gold text-xs font-medium disabled:opacity-50"
+                        >
+                          {regenId === product.id ? "Modelling…" : "Re-model (3)"}
+                        </button>
                         <Link
                           href={`/admin/products/${product.id}`}
                           className="text-gold hover:text-gold-dark text-xs font-medium"
