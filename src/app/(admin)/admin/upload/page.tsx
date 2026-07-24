@@ -24,6 +24,12 @@ const APPAREL = new Set([
   "Dresses", "Tops", "Trousers", "Jumpsuits", "Knitwear", "Jackets & Coats",
 ]);
 
+// Photoroom preset models. "mix" rotates through them for a diverse catalogue.
+const PRESET_MODELS = [
+  "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey", "alex",
+  "maya", "reece", "lena", "julia", "jackson", "sophia", "emma", "ava", "fiona",
+];
+
 function defaultVariants(category: string): Variant[] {
   return APPAREL.has(category)
     ? SIZES.map((size) => ({ size, stock: 10 }))
@@ -44,6 +50,7 @@ export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   const [shots, setShots] = useState(3); // model shots per apparel product
+  const [modelChoice, setModelChoice] = useState("mix"); // "mix" or a preset name
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -87,7 +94,11 @@ export default function UploadPage() {
     setItems((prev) => prev.filter((it) => it.id !== id));
   }
 
-  async function publishOne(it: Item, token: string) {
+  async function publishOne(it: Item, token: string, index: number) {
+    // "mix" rotates through presets across the batch so the catalogue is diverse;
+    // a pinned choice uses that one model for every item.
+    const chosenModel =
+      modelChoice === "mix" ? PRESET_MODELS[index % PRESET_MODELS.length] : modelChoice;
     update(it.id, { status: "processing", message: "Modelling…" });
     try {
       const fd = new FormData();
@@ -97,6 +108,7 @@ export default function UploadPage() {
       fd.append("category", it.category);
       fd.append("variants", JSON.stringify(it.variants));
       fd.append("shots", String(shots));
+      fd.append("model", chosenModel);
       const res = await fetch("/api/admin/product-studio", {
         method: "POST",
         headers: { "x-admin-password": token },
@@ -121,7 +133,7 @@ export default function UploadPage() {
     );
     if (!ready.length) return;
     setBusy(true);
-    for (const it of ready) await publishOne(it, token);
+    for (let i = 0; i < ready.length; i++) await publishOne(ready[i], token, i);
     setBusy(false);
   }
 
@@ -141,21 +153,41 @@ export default function UploadPage() {
           </p>
         </div>
 
-        {/* Model shots per product */}
-        <div className="flex flex-wrap items-center gap-3 mb-4 bg-white border border-gray-200 rounded-lg px-4 py-3">
-          <span className="text-sm font-medium text-charcoal">Model shots per product</span>
-          <select
-            value={shots}
-            onChange={(e) => setShots(Number(e.target.value))}
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
-          >
-            <option value={3}>3 — front, ¾ turn &amp; back (recommended)</option>
-            <option value={2}>2 — front &amp; ¾ turn</option>
-            <option value={1}>1 — front only (fastest, best for bulk)</option>
-          </select>
-          <span className="text-xs text-charcoal/50">
-            Uses {shots} Photoroom credit{shots === 1 ? "" : "s"} per clothing item. Accessories/shoes always get 1 clean shot.
-          </span>
+        {/* Generation settings */}
+        <div className="mb-4 bg-white border border-gray-200 rounded-lg px-4 py-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-charcoal w-40">Model</span>
+            <select
+              value={modelChoice}
+              onChange={(e) => setModelChoice(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 text-sm capitalize"
+            >
+              <option value="mix">Mix / rotate — diverse (recommended)</option>
+              {PRESET_MODELS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <span className="text-xs text-charcoal/50">
+              {modelChoice === "mix"
+                ? "Each product uses a different model, for a varied catalogue."
+                : `Every product uses the “${modelChoice}” model.`}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-charcoal w-40">Model shots per product</span>
+            <select
+              value={shots}
+              onChange={(e) => setShots(Number(e.target.value))}
+              className="border border-gray-300 rounded px-3 py-2 text-sm"
+            >
+              <option value={3}>3 — front, ¾ turn &amp; back (recommended)</option>
+              <option value={2}>2 — front &amp; ¾ turn</option>
+              <option value={1}>1 — front only (fastest, best for bulk)</option>
+            </select>
+            <span className="text-xs text-charcoal/50">
+              Uses {shots} Photoroom credit{shots === 1 ? "" : "s"} per clothing item. Accessories/shoes always get 1 clean shot.
+            </span>
+          </div>
         </div>
 
         {/* Drop zone */}

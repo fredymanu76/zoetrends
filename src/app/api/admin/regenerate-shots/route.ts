@@ -83,7 +83,15 @@ export async function POST(req: NextRequest) {
     const flat = await loadImage(flatUrl);
     if (!flat) return NextResponse.json({ error: "Could not load the product's flat image." }, { status: 400 });
 
-    const model = product.modelPreviewImages?.[0]?.modelName || "zoe";
+    // Reuse the product's recorded model if any; otherwise pick a preset that
+    // varies per product (deterministic hash) so re-modelled items stay diverse.
+    const PRESET_MODELS = [
+      "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey", "alex",
+      "maya", "reece", "lena", "julia", "jackson", "sophia", "emma", "ava", "fiona",
+    ];
+    const recorded = product.modelPreviewImages?.[0]?.modelName;
+    const hash = [...String(productId)].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const model = recorded || PRESET_MODELS[hash % PRESET_MODELS.length];
     const ALL_POSES: { pose: string; angle: Angle }[] = [
       { pose: "standing", angle: "front" },
       { pose: "34turn", angle: "side" },
