@@ -43,6 +43,7 @@ function nameFromFile(fileName: string): string {
 export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
+  const [shots, setShots] = useState(3); // model shots per apparel product
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -95,6 +96,7 @@ export default function UploadPage() {
       fd.append("price", it.price);
       fd.append("category", it.category);
       fd.append("variants", JSON.stringify(it.variants));
+      fd.append("shots", String(shots));
       const res = await fetch("/api/admin/product-studio", {
         method: "POST",
         headers: { "x-admin-password": token },
@@ -137,6 +139,23 @@ export default function UploadPage() {
             press <strong>Publish</strong>. We model each item and place it in the
             right part of your shop automatically.
           </p>
+        </div>
+
+        {/* Model shots per product */}
+        <div className="flex flex-wrap items-center gap-3 mb-4 bg-white border border-gray-200 rounded-lg px-4 py-3">
+          <span className="text-sm font-medium text-charcoal">Model shots per product</span>
+          <select
+            value={shots}
+            onChange={(e) => setShots(Number(e.target.value))}
+            className="border border-gray-300 rounded px-3 py-2 text-sm"
+          >
+            <option value={3}>3 — front, ¾ turn &amp; back (recommended)</option>
+            <option value={2}>2 — front &amp; ¾ turn</option>
+            <option value={1}>1 — front only (fastest, best for bulk)</option>
+          </select>
+          <span className="text-xs text-charcoal/50">
+            Uses {shots} Photoroom credit{shots === 1 ? "" : "s"} per clothing item. Accessories/shoes always get 1 clean shot.
+          </span>
         </div>
 
         {/* Drop zone */}
