@@ -61,8 +61,8 @@ export default async function CollectionTiles() {
               <Link
                 key={tile.label}
                 href={tile.href}
-                className={`group relative overflow-hidden rounded-sm h-72 md:h-96 flex items-center justify-center ${
-                  img ? "bg-black" : tile.bg
+                className={`group relative overflow-hidden rounded-sm h-72 md:h-96 flex justify-center ${
+                  img ? "items-end bg-neutral-200" : "items-center " + tile.bg
                 }`}
               >
                 {img ? (
@@ -72,9 +72,10 @@ export default async function CollectionTiles() {
                       src={img}
                       alt=""
                       aria-hidden="true"
-                      className="absolute inset-0 w-full h-full object-cover object-top opacity-90 group-hover:scale-105 transition-transform duration-500"
+                      className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/20" />
+                    {/* Darken only the lower band, behind the text — keeps the model bright */}
+                    <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
                   </>
                 ) : (
                   <div className="absolute inset-0 overflow-hidden opacity-60">
@@ -86,9 +87,13 @@ export default async function CollectionTiles() {
                   </div>
                 )}
 
-                <div className={`relative z-10 text-center px-6 ${img ? "text-white" : tile.text}`}>
-                  <p className="text-xs tracking-[0.3em] uppercase opacity-80 mb-3">{tile.caption}</p>
-                  <h3 className="text-2xl md:text-3xl font-light tracking-[0.1em] mb-6">{tile.label}</h3>
+                <div
+                  className={`relative z-10 text-center px-6 ${
+                    img ? "text-white pb-8 [text-shadow:0_1px_4px_rgba(0,0,0,0.85)]" : tile.text
+                  }`}
+                >
+                  <p className={`text-xs tracking-[0.3em] uppercase mb-3 ${img ? "opacity-95" : "opacity-70"}`}>{tile.caption}</p>
+                  <h3 className="text-2xl md:text-3xl font-light tracking-[0.1em] mb-5">{tile.label}</h3>
                   <span className="inline-block px-8 py-2.5 border border-gold text-xs tracking-[0.2em] uppercase group-hover:bg-gold group-hover:text-white transition-all duration-300">
                     Shop Now
                   </span>
