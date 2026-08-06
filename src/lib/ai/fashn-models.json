@@ -1,0 +1,18 @@
+{
+  "zoe": { "description": "young Black female model with long braided hair", "seed": 101 },
+  "avery": { "description": "blonde Caucasian female model with shoulder-length hair", "seed": 102 },
+  "sam": { "description": "East Asian female model with long straight black hair", "seed": 103 },
+  "taylor": { "description": "brunette Caucasian female model with loose wavy hair", "seed": 104 },
+  "kendall": { "description": "tall slim brunette female model with long straight hair", "seed": 105 },
+  "jordan": { "description": "Black female model with short natural afro hair", "seed": 106 },
+  "casey": { "description": "red-haired Caucasian female model with freckles", "seed": 107 },
+  "maya": { "description": "South Asian female model with long dark hair", "seed": 108 },
+  "reece": { "description": "mixed-race female model with curly brown hair", "seed": 109 },
+  "lena": { "description": "Black female model with short curly hair and a fuller figure", "seed": 110 },
+  "julia": { "description": "Mediterranean female model with dark wavy hair", "seed": 111 },
+  "jackson": { "description": "Latina female model with long brown hair", "seed": 112 },
+  "sophia": { "description": "elegant mature female model with silver-grey hair", "seed": 113 },
+  "emma": { "description": "petite blonde female model with a bob haircut", "seed": 114 },
+  "ava": { "description": "East Asian female model with a pixie haircut", "seed": 115 },
+  "fiona": { "description": "curvy plus-size Caucasian female model with auburn hair", "seed": 116 }
+}

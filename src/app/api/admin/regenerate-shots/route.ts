@@ -3,7 +3,12 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/server";
 import { getProductById, updateProduct } from "@/lib/products/repository";
+import { isFashnConfigured, fashnOnModel, fashnProductShot } from "@/lib/ai/fashn";
+import type { FashnView } from "@/lib/ai/fashn";
 import type { ProductImage } from "@/types";
+
+// Generating up to 3 on-model shots sequentially can take a few minutes.
+export const maxDuration = 300;
 
 const PHOTOROOM_EDIT_URL = "https://image-api.photoroom.com/v2/edit";
 const PHOTOROOM_SEGMENT_URL = "https://sdk.photoroom.com/v1/segment";
@@ -61,7 +66,13 @@ export async function POST(req: NextRequest) {
   if (!verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const key = process.env.PHOTOROOM_API_KEY;
-  if (!key) return NextResponse.json({ error: "PHOTOROOM_API_KEY is not set." }, { status: 400 });
+  const useFashn = isFashnConfigured();
+  if (!key && !useFashn) {
+    return NextResponse.json(
+      { error: "No AI provider configured. Set FASHN_API_KEY (or PHOTOROOM_API_KEY)." },
+      { status: 400 }
+    );
+  }
 
   try {
     const { productId, shots: shotsRaw } = await req.json();
@@ -148,18 +159,38 @@ export async function POST(req: NextRequest) {
       return Buffer.from(await res.arrayBuffer());
     }
 
+    async function generateOne(step: { pose: string; angle: Angle }): Promise<Buffer | null> {
+      if (useFashn) {
+        const result = isApparel
+          ? await fashnOnModel({
+              garment: flat!.buffer,
+              garmentContentType: flat!.contentType,
+              productName,
+              garmentNoun: garmentNoun || "garment",
+              view: step.angle as FashnView,
+              modelKey: model,
+            })
+          : await fashnProductShot(flat!.buffer, flat!.contentType);
+        if (!result.buffer) photoroomError = result.error;
+        return result.buffer;
+      }
+      return isApparel ? genOnModel(step.pose) : genProductShot();
+    }
+
     const generated: { buffer: Buffer; angle: Angle }[] = [];
     for (const step of posePlan) {
-      const buf = isApparel ? await genOnModel(step.pose) : await genProductShot();
+      const buf = await generateOne(step);
       if (buf) generated.push({ buffer: buf, angle: step.angle });
     }
     if (!generated.length) {
-      const outOfCredits = /402|exhausted|plan/i.test(photoroomError);
+      const outOfCredits = /402|exhausted|insufficient|plan/i.test(photoroomError);
+      const provider = useFashn ? "FASHN" : "Photoroom";
+      const topUpAt = useFashn ? "app.fashn.ai/api" : "app.photoroom.com/api-dashboard";
       return NextResponse.json(
         {
           error: outOfCredits
-            ? "Your Photoroom plan is out of image credits. Top up at app.photoroom.com/api-dashboard, then try again."
-            : `Photoroom generation failed. ${photoroomError}`.trim(),
+            ? `Your ${provider} plan is out of image credits. Top up at ${topUpAt}, then try again.`
+            : `${provider} generation failed. ${photoroomError}`.trim(),
         },
         { status: outOfCredits ? 402 : 502 }
       );
@@ -188,7 +219,7 @@ export async function POST(req: NextRequest) {
             angle: s.angle,
             modelName: model,
             generatedAt: new Date().toISOString(),
-            provider: "photoroom",
+            provider: useFashn ? "fashn" : "photoroom",
           }))
         : [],
     });

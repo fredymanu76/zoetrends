@@ -5,7 +5,12 @@ import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/server";
 import { createProduct } from "@/lib/products/repository";
 import { categoryToCollectionSlugs, slugify } from "@/lib/utils";
 import { SIZES } from "@/lib/constants";
+import { isFashnConfigured, fashnOnModel, fashnProductShot } from "@/lib/ai/fashn";
+import type { FashnView } from "@/lib/ai/fashn";
 import type { GarmentCategory, ProductImage } from "@/types";
+
+// Generating up to 3 on-model shots sequentially can take a few minutes.
+export const maxDuration = 300;
 
 const PHOTOROOM_EDIT_URL = "https://image-api.photoroom.com/v2/edit";
 const PHOTOROOM_SEGMENT_URL = "https://sdk.photoroom.com/v1/segment";
@@ -61,9 +66,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const apiKey = process.env.PHOTOROOM_API_KEY;
-  if (!apiKey) {
+  if (!apiKey && !isFashnConfigured()) {
     return NextResponse.json(
-      { error: "PHOTOROOM_API_KEY is not set in .env.local." },
+      { error: "No AI provider configured. Set FASHN_API_KEY (or PHOTOROOM_API_KEY) in .env.local." },
       { status: 400 }
     );
   }
@@ -109,7 +114,8 @@ export async function POST(req: NextRequest) {
 
     // Narrowed captures so the nested helpers keep their types.
     const imageFile: File = file;
-    const key: string = apiKey;
+    const key: string = apiKey || "";
+    const useFashn = isFashnConfigured();
     const flat = Buffer.from(await imageFile.arrayBuffer());
     const isApparel = category in APPAREL;
     const base = slugify(name) || "product";
@@ -169,14 +175,37 @@ export async function POST(req: NextRequest) {
       return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
     }
 
+    let genError = "";
+    async function generateOne(step: { pose: string; angle: Angle }): Promise<Buffer | null> {
+      if (useFashn) {
+        const result = isApparel
+          ? await fashnOnModel({
+              garment: flat,
+              garmentContentType: imageFile.type,
+              productName: name,
+              garmentNoun: GARMENT_NOUN[APPAREL[category]],
+              view: step.angle as FashnView,
+              modelKey: model,
+              faceReference: brandModelBuf
+                ? { buffer: brandModelBuf, contentType: brandModelType }
+                : null,
+            })
+          : await fashnProductShot(flat, imageFile.type);
+        if (!result.buffer) genError = result.error;
+        return result.buffer;
+      }
+      return isApparel ? genOnModel(step.pose) : genProductShot();
+    }
+
     const generated: { buffer: Buffer; angle: Angle }[] = [];
     for (const step of posePlan) {
-      const buf = isApparel ? await genOnModel(step.pose) : await genProductShot();
+      const buf = await generateOne(step);
       if (buf) generated.push({ buffer: buf, angle: step.angle });
     }
     if (!generated.length) {
+      const provider = useFashn ? "FASHN" : "Photoroom";
       return NextResponse.json(
-        { error: "Photoroom generation failed. Check your API key and remaining quota." },
+        { error: `${provider} generation failed. Check your API key and remaining credits. ${genError}`.trim() },
         { status: 502 }
       );
     }
@@ -229,7 +258,7 @@ export async function POST(req: NextRequest) {
             angle: s.angle,
             modelName: model,
             generatedAt: new Date().toISOString(),
-            provider: "photoroom",
+            provider: useFashn ? "fashn" : "photoroom",
           }))
         : [],
     });

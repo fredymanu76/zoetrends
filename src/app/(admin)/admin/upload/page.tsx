@@ -270,7 +270,7 @@ export default function UploadPage() {
               <option value={1}>1 — front only (fastest, best for bulk)</option>
             </select>
             <span className="text-xs text-charcoal/50">
-              Uses {shots} Photoroom credit{shots === 1 ? "" : "s"} per clothing item. Accessories/shoes always get 1 clean shot.
+              Uses AI image credits for {shots} shot{shots === 1 ? "" : "s"} per clothing item. Accessories/shoes always get 1 clean shot.
             </span>
           </div>
         </div>
