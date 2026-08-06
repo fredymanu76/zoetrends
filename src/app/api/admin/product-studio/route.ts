@@ -128,10 +128,22 @@ export async function POST(req: NextRequest) {
       ? ALL_POSES.slice(0, shots)
       : [{ pose: "standing", angle: "front" }];
 
+    // Anchor the garment type so partial/cropped photos (e.g. one dress cut out
+    // of a rack shot) aren't misread as a different garment worn over other clothes.
+    const GARMENT_NOUN: Record<GarmentCategory, string> = {
+      dress: "dress",
+      top: "top",
+      bottom: "trousers",
+      full_outfit: "jumpsuit",
+      jacket: "jacket",
+    };
     async function genOnModel(pose: string): Promise<Buffer | null> {
       const f = new FormData();
       f.append("imageFile", new Blob([flat], { type: imageFile.type }), imageFile.name);
       f.append("virtualModel.mode", "ai.auto");
+      if (isApparel) {
+        f.append("virtualModel.prompt", `wearing ${name}, a ${GARMENT_NOUN[APPAREL[category]]}, worn on its own exactly as shown`);
+      }
       if (brandModelBuf) {
         f.append(
           "virtualModel.model.custom.imageFile",
@@ -151,7 +163,7 @@ export async function POST(req: NextRequest) {
     async function genProductShot(): Promise<Buffer | null> {
       const f = new FormData();
       f.append("image_file", new Blob([flat], { type: imageFile.type }), imageFile.name);
-      f.append("bg_color", "FFFFFF");
+      f.append("bg_color", "#FFFFFF");
       f.append("format", "png");
       const res = await fetch(PHOTOROOM_SEGMENT_URL, { method: "POST", headers: { "x-api-key": key }, body: f });
       return res.ok ? Buffer.from(await res.arrayBuffer()) : null;

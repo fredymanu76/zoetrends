@@ -25,10 +25,42 @@ const APPAREL = new Set([
 ]);
 
 // Photoroom preset models. "mix" rotates through them for a diverse catalogue.
+// Previews live in /public/model-gallery/{name}.jpg — regenerate with
+// scripts/generate-model-gallery.mjs (models without a preview show initials).
 const PRESET_MODELS = [
-  "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey", "alex",
+  "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey",
   "maya", "reece", "lena", "julia", "jackson", "sophia", "emma", "ava", "fiona",
 ];
+
+function ModelCard({
+  name, selected, onSelect,
+}: { name: string; selected: boolean; onSelect: () => void }) {
+  const [noPreview, setNoPreview] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`shrink-0 w-20 text-center rounded-lg border-2 p-1 transition-colors ${
+        selected ? "border-gold bg-gold/10" : "border-transparent hover:border-gray-300"
+      }`}
+    >
+      {noPreview ? (
+        <div className="w-full h-24 rounded bg-gray-100 flex items-center justify-center text-lg font-semibold text-charcoal/40 uppercase">
+          {name[0]}
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/model-gallery/${name}.jpg`}
+          alt={`${name} model preview`}
+          className="w-full h-24 object-cover object-top rounded bg-gray-100"
+          onError={() => setNoPreview(true)}
+        />
+      )}
+      <span className="block text-xs capitalize mt-1 text-charcoal/70">{name}</span>
+    </button>
+  );
+}
 
 function defaultVariants(category: string): Variant[] {
   return APPAREL.has(category)
@@ -162,26 +194,47 @@ export default function UploadPage() {
 
         {/* Generation settings */}
         <div className="mb-4 bg-white border border-gray-200 rounded-lg px-4 py-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-charcoal w-40">Model</span>
-            <select
-              value={modelChoice}
-              onChange={(e) => setModelChoice(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 text-sm capitalize"
-            >
-              <option value="mix">Mix / rotate — diverse (recommended)</option>
-              <option value="custom">Custom brand model (upload your own)</option>
-              {PRESET_MODELS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <span className="text-xs text-charcoal/50">
-              {modelChoice === "mix"
-                ? "Each product uses a different model, for a varied catalogue."
-                : modelChoice === "custom"
-                ? "Every product is modelled on your uploaded brand model."
-                : `Every product uses the “${modelChoice}” model.`}
-            </span>
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="text-sm font-medium text-charcoal w-40 pt-2">Model</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setModelChoice("mix")}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm transition-colors ${
+                    modelChoice === "mix" ? "border-gold bg-gold/10" : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  Mix / rotate — diverse (recommended)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModelChoice("custom")}
+                  className={`px-3 py-2 rounded-lg border-2 text-sm transition-colors ${
+                    modelChoice === "custom" ? "border-gold bg-gold/10" : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  Custom brand model (upload your own)
+                </button>
+              </div>
+              <div className="flex gap-1 overflow-x-auto pb-1">
+                {PRESET_MODELS.map((m) => (
+                  <ModelCard
+                    key={m}
+                    name={m}
+                    selected={modelChoice === m}
+                    onSelect={() => setModelChoice(m)}
+                  />
+                ))}
+              </div>
+              <span className="block text-xs text-charcoal/50 mt-1">
+                {modelChoice === "mix"
+                  ? "Each product uses a different model, for a varied catalogue."
+                  : modelChoice === "custom"
+                  ? "Every product is modelled on your uploaded brand model."
+                  : `Every product uses the “${modelChoice}” model.`}
+              </span>
+            </div>
           </div>
 
           {modelChoice === "custom" && (

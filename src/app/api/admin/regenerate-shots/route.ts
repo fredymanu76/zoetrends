@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     // Reuse the product's recorded model if any; otherwise pick a preset that
     // varies per product (deterministic hash) so re-modelled items stay diverse.
     const PRESET_MODELS = [
-      "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey", "alex",
+      "zoe", "avery", "sam", "taylor", "kendall", "jordan", "casey",
       "maya", "reece", "lena", "julia", "jackson", "sophia", "emma", "ava", "fiona",
     ];
     const recorded = product.modelPreviewImages?.[0]?.modelName;
@@ -99,10 +99,30 @@ export async function POST(req: NextRequest) {
     ];
     const posePlan = isApparel ? ALL_POSES.slice(0, shots) : [{ pose: "standing", angle: "front" as Angle }];
 
+    // Anchor the garment type so partial/cropped photos aren't misread as a
+    // different garment worn over other clothes.
+    const GARMENT_NOUN: Record<string, string> = {
+      dress: "dress",
+      top: "top",
+      bottom: "trousers",
+      full_outfit: "jumpsuit",
+      jacket: "jacket",
+    };
+    const CATEGORY_NOUN: Record<string, string> = {
+      Dresses: "dress", Tops: "top", Knitwear: "top", Trousers: "trousers",
+      Jumpsuits: "jumpsuit", "Jackets & Coats": "jacket",
+    };
+    const garmentNoun =
+      (product.garmentCategory && GARMENT_NOUN[product.garmentCategory]) ||
+      CATEGORY_NOUN[product.category];
+    const productName = product.name;
     async function genOnModel(pose: string): Promise<Buffer | null> {
       const f = new FormData();
       f.append("imageFile", new Blob([new Uint8Array(flat!.buffer)], { type: flat!.contentType }), flat!.name);
       f.append("virtualModel.mode", "ai.auto");
+      if (garmentNoun) {
+        f.append("virtualModel.prompt", `wearing ${productName}, a ${garmentNoun}, worn on its own exactly as shown`);
+      }
       f.append("virtualModel.model.preset.name", model);
       f.append("virtualModel.pose", pose);
       f.append("virtualModel.quality", "standard");
@@ -118,7 +138,7 @@ export async function POST(req: NextRequest) {
     async function genProductShot(): Promise<Buffer | null> {
       const f = new FormData();
       f.append("image_file", new Blob([new Uint8Array(flat!.buffer)], { type: flat!.contentType }), flat!.name);
-      f.append("bg_color", "FFFFFF");
+      f.append("bg_color", "#FFFFFF");
       f.append("format", "png");
       const res = await fetch(PHOTOROOM_SEGMENT_URL, { method: "POST", headers: { "x-api-key": key! }, body: f });
       if (!res.ok) {
