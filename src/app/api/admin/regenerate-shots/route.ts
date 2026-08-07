@@ -1,7 +1,7 @@
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/server";
+import { saveImage as storeImage } from "@/lib/storage";
 import { getProductById, updateProduct } from "@/lib/products/repository";
 import { isFashnConfigured, fashnOnModel, fashnProductShot } from "@/lib/ai/fashn";
 import type { FashnView } from "@/lib/ai/fashn";
@@ -41,25 +41,12 @@ async function loadImage(url: string): Promise<{ buffer: Buffer; contentType: st
   }
 }
 
-async function saveImage(buffer: Buffer, folder: string, fileName: string): Promise<string> {
-  if (isSupabaseConfigured()) {
-    try {
-      const bucket = process.env.SUPABASE_MODEL_PREVIEWS_BUCKET || "model-previews";
-      const storagePath = `${folder}/${fileName}`;
-      const supabase = getSupabaseAdmin();
-      const { error } = await supabase.storage.from(bucket).upload(storagePath, buffer, {
-        contentType: "image/png",
-        upsert: true,
-      });
-      if (!error) return supabase.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl;
-    } catch {
-      /* fall through */
-    }
-  }
-  const dir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, fileName), buffer);
-  return `/uploads/${folder}/${fileName}`;
+function saveImage(buffer: Buffer, folder: string, fileName: string): Promise<string> {
+  return storeImage(
+    buffer, "image/png",
+    "SUPABASE_MODEL_PREVIEWS_BUCKET", "model-previews",
+    folder, fileName
+  );
 }
 
 export async function POST(req: NextRequest) {

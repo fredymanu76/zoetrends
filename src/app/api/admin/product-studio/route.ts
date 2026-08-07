@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase/server";
+import { saveImage } from "@/lib/storage";
 import { createProduct } from "@/lib/products/repository";
 import { categoryToCollectionSlugs, slugify } from "@/lib/utils";
 import { SIZES } from "@/lib/constants";
@@ -28,37 +28,6 @@ const APPAREL: Record<string, GarmentCategory> = {
 function verifyAdmin(req: NextRequest): boolean {
   const auth = req.headers.get("x-admin-password");
   return !!auth && auth === process.env.ADMIN_PASSWORD;
-}
-
-/** Save a buffer to Supabase storage (preferred) or local /public as a fallback. */
-async function saveImage(
-  buffer: Buffer,
-  contentType: string,
-  bucketEnv: string,
-  defaultBucket: string,
-  folder: string,
-  fileName: string
-): Promise<string> {
-  if (isSupabaseConfigured()) {
-    try {
-      const bucket = process.env[bucketEnv] || defaultBucket;
-      const storagePath = `${folder}/${fileName}`;
-      const supabase = getSupabaseAdmin();
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(storagePath, buffer, { contentType, upsert: true });
-      if (!error) {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-        return data.publicUrl;
-      }
-    } catch {
-      // fall through to local
-    }
-  }
-  const dir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, fileName), buffer);
-  return `/uploads/${folder}/${fileName}`;
 }
 
 export async function POST(req: NextRequest) {
