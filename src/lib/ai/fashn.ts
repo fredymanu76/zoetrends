@@ -108,6 +108,32 @@ export async function fashnOnModel(opts: {
   return run("product-to-model", inputs);
 }
 
+/**
+ * On-model shot driven by the seller's own free-text description (chat studio).
+ * The description leads; we only anchor garment fidelity and studio styling.
+ */
+export async function fashnFromDescription(opts: {
+  garment: Buffer;
+  garmentContentType: string;
+  description: string;
+  view?: FashnView;
+  seed?: number;
+}): Promise<{ buffer: Buffer | null; error: string }> {
+  const wants = opts.description.trim().replace(/\s+/g, " ");
+  return run("product-to-model", {
+    product_image: toDataUri(opts.garment, opts.garmentContentType),
+    prompt:
+      `${wants}. The model wears this exact garment on its own, exactly as shown, ` +
+      `${VIEW_PHRASE[opts.view || "front"]}, full-body ecommerce studio photo, ` +
+      `clean neutral studio background`,
+    aspect_ratio: "2:3",
+    resolution: "1k",
+    generation_mode: "balanced",
+    seed: opts.seed ?? 42,
+    output_format: "png",
+  });
+}
+
 /** Clean white-background product shot for non-apparel (background-remove + flatten). */
 export async function fashnProductShot(
   garment: Buffer,
