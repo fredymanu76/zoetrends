@@ -4,10 +4,10 @@
 // drop a garment photo, describe the model/look you want in plain English,
 // the shot generates in the thread, then publish it to the shop inline.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import { CATEGORIES } from "@/lib/constants";
-import { FiArrowUp, FiDownload, FiImage, FiPlus, FiX } from "react-icons/fi";
+import { FiArrowUp, FiDownload, FiImage, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 
 type Shot = { url: string; view: "front" | "side" | "back" };
 
@@ -35,12 +35,12 @@ function loadChats(): Chat[] {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     const parsed = raw ? (JSON.parse(raw) as Chat[]) : [];
-    // Drop in-flight state that can't survive a reload.
+    // Only published shots are kept across a reload. Anything generated but
+    // not published is treated as unsaved working state and is not restored —
+    // the seller must publish an image for it to survive.
     return parsed.map((c) => ({
       ...c,
-      messages: c.messages.filter(
-        (m) => m.kind !== "generation" || m.status === "done" || m.status === "error"
-      ),
+      messages: c.messages.filter((m) => m.kind !== "generation" || !!m.published),
     }));
   } catch {
     return [];
@@ -88,6 +88,118 @@ export default function StudioPage() {
       ),
     }));
   }
+
+  // Fire-and-forget purge of discarded/unpublished images from storage so they
+  // are not retained. keepalive lets it complete during a page-leave.
+  const cleanupUrls = useCallback((urls: string[], keepalive = false) => {
+    const clean = Array.from(new Set(urls.filter(Boolean)));
+    if (!clean.length) return;
+    const token = sessionStorage.getItem("admin_token") || "";
+    try {
+      void fetch("/api/admin/agent-cleanup", {
+        method: "POST",
+        headers: { "x-admin-password": token, "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: clean }),
+        keepalive,
+      }).catch(() => {});
+    } catch {
+      /* best-effort */
+    }
+  }, []);
+
+  // A shot URL is unique to one generation, but a flat garment URL can be
+  // reused by restyles — never purge a URL still referenced elsewhere.
+  function urlsInUseExcept(chat: Chat | undefined, exceptGenId: string): Set<string> {
+    const used = new Set<string>();
+    (chat?.messages || []).forEach((m) => {
+      if (m.kind === "generation" && m.id !== exceptGenId) {
+        [m.flatUrl, ...m.shots.map((s) => s.url)].forEach((u) => u && used.add(u));
+      }
+    });
+    return used;
+  }
+
+  // Remove an entire generation (its garment + every generated shot) and purge
+  // its images from storage.
+  function deleteGeneration(chatId: string, genId: string) {
+    const chat = chats.find((c) => c.id === chatId);
+    const gen = chat?.messages.find(
+      (m): m is Extract<Msg, { kind: "generation" }> => m.kind === "generation" && m.id === genId
+    );
+    if (gen && !gen.published) {
+      const stillUsed = urlsInUseExcept(chat, genId);
+      cleanupUrls([gen.flatUrl, ...gen.shots.map((s) => s.url)].filter((u) => !stillUsed.has(u)));
+    }
+    updateChat(chatId, (c) => ({
+      ...c,
+      messages: c.messages.filter((m) => !(m.kind === "generation" && m.id === genId)),
+    }));
+  }
+
+  // Remove a single generated shot you don't like — keeping the others. If it
+  // was the last shot, the whole generation card goes with it.
+  function deleteShot(chatId: string, genId: string, url: string) {
+    const chat = chats.find((c) => c.id === chatId);
+    const gen = chat?.messages.find(
+      (m): m is Extract<Msg, { kind: "generation" }> => m.kind === "generation" && m.id === genId
+    );
+    const purge = [url];
+    // If this empties the generation, purge its flat garment too (unless reused).
+    if (gen && gen.shots.length === 1 && gen.shots[0].url === url) {
+      const stillUsed = urlsInUseExcept(chat, genId);
+      if (gen.flatUrl && !stillUsed.has(gen.flatUrl)) purge.push(gen.flatUrl);
+    }
+    cleanupUrls(purge);
+    updateChat(chatId, (c) => ({
+      ...c,
+      messages: c.messages.flatMap((m) => {
+        if (!(m.kind === "generation" && m.id === genId)) return [m];
+        const shots = m.shots.filter((s) => s.url !== url);
+        return shots.length ? [{ ...m, shots }] : [];
+      }),
+    }));
+  }
+
+  // Enforce "don't keep unpublished images": warn before leaving with any
+  // unpublished shots, and purge them from storage on the way out. A ref keeps
+  // the leave handlers reading the latest chats without re-binding listeners.
+  const chatsRef = useRef(chats);
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  const unpublishedPurgeUrls = useCallback((): string[] => {
+    const gens = chatsRef.current
+      .flatMap((c) => c.messages)
+      .filter((m): m is Extract<Msg, { kind: "generation" }> => m.kind === "generation");
+    const published = new Set(
+      gens.filter((g) => g.published).flatMap((g) => [g.flatUrl, ...g.shots.map((s) => s.url)])
+    );
+    const urls = gens
+      .filter((g) => !g.published)
+      .flatMap((g) => [g.flatUrl, ...g.shots.map((s) => s.url)])
+      .filter((u) => u && !published.has(u));
+    return Array.from(new Set(urls));
+  }, []);
+
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (unpublishedPurgeUrls().length) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    function onPageHide() {
+      const urls = unpublishedPurgeUrls();
+      if (urls.length) cleanupUrls(urls, true);
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [cleanupUrls, unpublishedPurgeUrls]);
 
   function newChat(): Chat {
     const chat: Chat = { id: `${Date.now()}`, title: "New chat", createdAt: Date.now(), messages: [] };
@@ -352,7 +464,18 @@ export default function StudioPage() {
               // generation card
               return (
                 <div key={m.id} className="space-y-2">
-                  <p className="text-xs text-charcoal/50">Generate Image</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-charcoal/50">Generate Image</p>
+                    {!m.published && m.status !== "loading" && (
+                      <button
+                        onClick={() => deleteGeneration(active!.id, m.id)}
+                        className="flex items-center gap-1 text-[11px] text-charcoal/40 hover:text-red-600"
+                        title="Delete this generation and all its shots"
+                      >
+                        <FiTrash2 size={12} /> Delete all
+                      </button>
+                    )}
+                  </div>
                   {m.status === "loading" && (
                     <div className="w-64 h-80 rounded-xl bg-gray-100 animate-pulse flex items-center justify-center text-xs text-charcoal/40">
                       Modelling… ~25s
@@ -367,8 +490,19 @@ export default function StudioPage() {
                     <>
                       <div className="flex gap-3 flex-wrap">
                         {m.shots.map((s) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img key={s.url} src={s.url} alt={s.view} className="w-64 rounded-xl border border-gray-100" />
+                          <div key={s.url} className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={s.url} alt={s.view} className="w-64 rounded-xl border border-gray-100" />
+                            {!m.published && (
+                              <button
+                                onClick={() => deleteShot(active!.id, m.id, s.url)}
+                                className="absolute top-2 right-2 flex items-center gap-1 bg-red-600 text-white text-[11px] font-medium rounded-full pl-2 pr-2.5 py-1 shadow-md hover:bg-red-700"
+                                title={`Delete this ${s.view} shot`}
+                              >
+                                <FiTrash2 size={13} /> Delete
+                              </button>
+                            )}
+                          </div>
                         ))}
                         {m.busy && (
                           <div className="w-64 h-80 rounded-xl bg-gray-100 animate-pulse flex items-center justify-center text-xs text-charcoal/40">

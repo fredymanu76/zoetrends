@@ -17,7 +17,7 @@ import {
 
 const navLinks = [
   { href: "/admin", label: "Dashboard", icon: FiGrid },
-  { href: "/admin/upload", label: "Add Products", icon: FiUploadCloud },
+  { href: "/admin/upload", label: "AI Product Upload", icon: FiUploadCloud },
   { href: "/admin/homepage", label: "Homepage", icon: FiHome },
   { href: "/admin/products", label: "Products", icon: FiPackage },
   { href: "/admin/orders", label: "Orders", icon: FiShoppingCart },
